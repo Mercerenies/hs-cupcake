@@ -11,7 +11,6 @@ import Data.Foldable as Fold
 import Data.Traversable
 import Data.Function
 import Control.Applicative
-import Control.Monad
 import Graphics.Reactive.Event
 import Graphics.Util
 

@@ -15,7 +15,7 @@ window :: Windowing r () (System r (EnvReader r ()))
 window = do
   frame0 <- Frame.makeFrame
   button0 <- Widget.makeWidget Button frame0
-  clicker <- onClick frame0
+  clicker <- Frame.onClick frame0
   let titlebar = (show <$> clicker) `defaulting` "FRP Title :)"
       buttonpos = pure $ Rect 10 10 80 30
   return (listSystem [

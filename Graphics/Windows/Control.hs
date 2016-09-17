@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, DataKinds #-}
 module Graphics.Windows.Control(Control, CtrlType(..), getCtrlText, setCtrlText,
                                 ctrlHwnd, makeButton, makeCtrl,
-                                setCtrlPos, showCtrl, hideCtrl) where
+                                setCtrlPos, showCtrl, hideCtrl, toControl) where
 
 import Graphics.Windows.CCall
 import Graphics.Windows.CoreTypes
@@ -55,6 +55,9 @@ makeCtrl str ctype hwnd = Control ctype <$> makeCtrl' (ctrlClsName ctype) str hw
 
 ctrlClsName :: CtrlType -> String
 ctrlClsName Button = "BUTTON"
+
+toControl :: CtrlType -> Handle -> Control
+toControl = Control
 
 instance TagType Button CtrlType where
     toTEnum _ = Button

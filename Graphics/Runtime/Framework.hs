@@ -5,14 +5,16 @@ module Graphics.Runtime.Framework(RuntimeSystem(..), Windowing, runWindowing) wh
 import Graphics.Runtime.Environment
 import Graphics.Reactive.Signal
 import Graphics.Reactive.System
-import Graphics.Windows.CoreTypes
-import qualified Graphics.Message.Mouse as Mouse
+import Graphics.Message.Decode
+import Data.Map(Map)
 import Control.Applicative
 import Control.Monad.RWS
 
 data RuntimeSystem r s = RuntimeSystem {
       rsRun :: System r (EnvReader r s) -> EnvReader r s (),
-      rsClick :: SignalT r (EnvReader r s) (Maybe (Handle, Mouse.Click))
+      rsEvents :: Map EventType (SignalT r (EnvReader r s) (Maybe MsgEvent),
+                                 System r (EnvReader r s) -> Maybe MsgEvent ->
+                                                             EnvReader r s (System r (EnvReader r s)))
     }
 
 -- TODO Transformer?

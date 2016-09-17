@@ -1,43 +1,38 @@
-module Graphics.Runtime(Windowing, onClick, doRuntime, EnvReader) where
+{-# LANGUAGE ScopedTypeVariables #-}
+
+module Graphics.Runtime(Windowing, doRuntime, EnvReader) where
 
 import Graphics.Windows.CCall(c_newWndProc, c_setWndPtr)
-import Graphics.Reactive.Signal
 import Graphics.Reactive.System
 import Graphics.Windows.Window as Window
 import Graphics.Windows.CoreTypes
 import Graphics.Runtime.Environment
 import Graphics.Runtime.Framework
-import qualified Graphics.Message.Mouse as Mouse
 import Graphics.Message.Unpack
 import Graphics.Message.Decode
+import Graphics.Types.Tagged
 import Data.Functor
 import Data.Word
 import Data.Int
 import Data.IORef
-import Control.Applicative
+import qualified Data.Map as Map
 import Control.Monad.RWS
 import Foreign.Ptr
 
-onClick :: Frame -> Windowing r s (SignalT r (EnvReader r s) Mouse.Click)
-onClick frame = do
-  click <- asks rsClick
-  return $ click ~~> \cev -> do
-                  env <- ask
-                  case cev of
-                    Nothing -> mzero
-                    Just (hwnd, cev')
-                        | frame == envMagicCast env hwnd -> pure cev'
-                        | otherwise -> mzero
-
-initRuntime :: IO (RuntimeSystem r s)
+initRuntime :: forall r s. IO (RuntimeSystem r s)
 initRuntime = do
-  (clickTest0, clickTestFire) <- newSignalT Nothing
-  let processMsg sys0 hwnd msg wparam lparam = do
+  clicker <- newSignalT Nothing
+  let processMsg :: System r (EnvReader r s) -> Handle -> Word32 -> Word64 -> Int64 ->
+                    EnvReader r s (Int64, System r (EnvReader r s))
+      processMsg sys0 hwnd msg wparam lparam = do
                 let pack = MsgPack hwnd msg wparam lparam
                     msgEv = decodeMsg pack
+                    def = (\x -> (x, sys0)) <$> (lift . lift $ defWndProc hwnd msg wparam lparam)
                 case msgEv of
-                  Just (ClickEvent click) -> ((,) 0) <$> (clickTestFire sys0 $ Just (hwnd, click))
-                  Nothing -> (\x -> (x, sys0)) <$> (lift . lift $ defWndProc hwnd msg wparam lparam)
+                  Nothing -> def
+                  Just ev -> case Map.lookup (getTag ev) $ rsEvents rs of
+                               Nothing -> def
+                               Just (_, fire) -> (,) 0 <$> fire sys0 (Just ev) -- TODO Nonzero return in some cases
       runner system = do
                 st <- get
                 sys <- liftIO $ newIORef system
@@ -63,7 +58,7 @@ initRuntime = do
                 liftIO $ freeHaskellFunPtr procPtr
       rs = RuntimeSystem {
                 rsRun = runner,
-                rsClick = clickTest0
+                rsEvents = Map.fromList [(TClickEvent, clicker)]
               }
   return rs
 
