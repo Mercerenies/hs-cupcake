@@ -1,6 +1,6 @@
 module Graphics.Reactive.System(System, fireEvent, fireInitEvent,
-                                newSystem, singletonSystem, newSignalT, newSignalT_,
-                                (<&>)) where
+                                newSystem, singletonSystem, listSystem, newSignalT, newSignalT_,
+                                (<&&)) where
 
 import Graphics.Reactive.Event
 import Graphics.Reactive.Signal
@@ -8,10 +8,12 @@ import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Monoid
 import Data.IORef
-import Data.Foldable hiding (concatMap, foldl)
+import Data.Traversable
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
+
+infixl 6 <&&
 
 data System s m = System (Map (Event s) Integer) [SignalT s m ()]
 
@@ -24,13 +26,15 @@ when_ :: Applicative m => Bool -> m () -> m ()
 when_ True = id
 when_ False = const $ pure ()
 
-fireEvent :: Applicative m => System s m -> Event s -> m (System s m)
-fireEvent (System mm xs) InitEvent = System mm xs <$ (for_ xs $ \x -> runSignalT x InitEvent mm)
+fireEvent :: Alternative m => System s m -> Event s -> m (System s m)
+fireEvent (System mm xs) InitEvent = let fireOnce x = void (runSignalT x InitEvent mm) <|> pure ()
+                                     in System mm xs <$ traverse fireOnce xs
 fireEvent (System mm xs) ev = let newMap = Map.alter (liftA2 (<|>) (fmap (+1)) (const $ Just 1)) ev mm
-                              in System newMap xs <$
-                                     (for_ xs $ \x -> when_ (x `dependsOn` ev) $ void (runSignalT x ev newMap))
+                                  fireOnce x = when_ (x `dependsOn` ev) $
+                                               void (runSignalT x ev newMap) <|> pure ()
+                              in System newMap xs <$ traverse fireOnce xs
 
-fireInitEvent :: Applicative m => System s m -> m (System s m)
+fireInitEvent :: Alternative m => System s m -> m (System s m)
 fireInitEvent = flip fireEvent InitEvent
 
 newSystem :: System s m
@@ -39,7 +43,10 @@ newSystem = mempty
 singletonSystem :: SignalT s m () -> System s m
 singletonSystem s = System Map.empty [s]
 
-newSignalT :: (Applicative m, MonadIO m) => a -> IO (SignalT s m a, System s m -> a -> m (System s m))
+listSystem :: [SignalT s m ()] -> System s m
+listSystem = System Map.empty
+
+newSignalT :: (Alternative m, MonadIO m) => a -> IO (SignalT s m a, System s m -> a -> m (System s m))
 newSignalT init0 = do
   ref <- newIORef init0
   event <- newEvent
@@ -49,10 +56,10 @@ newSignalT init0 = do
         fireEvent system event
   return (reader, writer)
 
-newSignalT_ :: (Applicative m, MonadIO m) => IO (SignalT s m (), System s m -> m (System s m))
+newSignalT_ :: (Alternative m, MonadIO m) => IO (SignalT s m (), System s m -> m (System s m))
 newSignalT_ = do
   (sign, f) <- newSignalT ()
   return (sign, \s -> f s ())
 
-(<&>) :: Applicative m => m (System s m0) -> m (System s m0) -> m (System s m0)
-(<&>) = liftA2 (<>)
+(<&&) :: System s m -> SignalT s m () -> System s m
+System ev xs <&& x = System ev (x : xs)

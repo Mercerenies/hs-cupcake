@@ -59,7 +59,7 @@ HWND makeWindow(char* titlebar) {
     wc.lpszClassName = className;
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     if (!RegisterClassEx(&wc))
-        return;
+        return NULL;
     hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,
                           className,
                           titlebar,
@@ -73,8 +73,32 @@ HWND makeWindow(char* titlebar) {
                           GetModuleHandle(NULL),
                           NULL);
     if (hwnd == NULL)
-        return;
+        return NULL;
     return hwnd;
+}
+
+HWND makeCtrl(char* cls, char* text, HWND parent) {
+
+    HWND hwnd = CreateWindowEx(0,
+                               cls,
+                               text,
+                               WS_CHILD,
+                               0,
+                               0,
+                               0,
+                               0,
+                               parent,
+                               NULL,
+                               GetModuleHandle(NULL),
+                               NULL);
+
+    if (hwnd == NULL)
+        return NULL;
+    return hwnd;
+}
+
+void setPos(HWND hwnd, int x, int y, int w, int h) {
+    SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER);
 }
 
 void showWindow(HWND hwnd) {

@@ -12,4 +12,3 @@ class PtrWrapper a where
 instance PtrWrapper Handle where
     getPtr (Handle x) = x
     putPtr = Handle
-

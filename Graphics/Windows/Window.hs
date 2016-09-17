@@ -1,8 +1,9 @@
 module Graphics.Windows.Window(makeWindow, showWindow, hideWindow, messageLoop,
-                               getWindowTitle, setWindowTitle) where
+                               getWindowTitle, setWindowTitle, setWindowPos) where
 
 import Graphics.Windows.CCall
 import Graphics.Windows.CoreTypes
+import Graphics.Windows.Rect
 import Foreign.C.String
 import Foreign.Marshal.Alloc
 
@@ -34,3 +35,6 @@ setWindowTitle hwnd str = do
   cStr <- newCString str
   c_setWindowTitle hwnd cStr
   free cStr
+
+setWindowPos :: Handle -> Rect -> IO ()
+setWindowPos hwnd (Rect x y w h) = c_setPos hwnd x y w h

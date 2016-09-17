@@ -1,3 +1,5 @@
+{-# LANGUAGE PolyKinds #-}
+
 module Graphics.Util (($>), guardA) where
 
 import Control.Applicative

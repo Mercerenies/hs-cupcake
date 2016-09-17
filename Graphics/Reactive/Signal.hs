@@ -1,5 +1,5 @@
 module Graphics.Reactive.Signal(Event, SignalT, Signal, react, triggerOn, signalT, dependsOn,
-                                runSignalT, runSignal, liftSignal, (~~>),
+                                runSignalT, runSignal, liftSignal, (~~>), killSignal,
                                 hairpin, (<-->), defaulting, (<~~>), (@>), (@->), stepper, stepperOn) where
 
 import Data.Set (Set)
@@ -13,6 +13,7 @@ import Data.Function
 import Control.Applicative
 import Control.Monad
 import Graphics.Reactive.Event
+import Graphics.Util
 
 data SignalT s m a = SignalT (Set (Event s)) (Event s -> (Map (Event s) Integer) -> m a)
 
@@ -60,17 +61,20 @@ stepValue init0 f = do
   return $ react (modifyRef ref f *> readRef ref)
 -}
 
-hairpin :: Functor m => SignalT s m a -> SignalT s m (Maybe a)
-hairpin (SignalT ev0 x) = SignalT ev0 $ \ev k -> ((guard (ev `Set.member` ev0) *>) . pure) <$> (x ev k)
+killSignal :: Alternative m => SignalT s m a
+killSignal = empty
+
+hairpin :: Alternative m => SignalT s m a -> SignalT s m a
+hairpin (SignalT ev0 x) = SignalT ev0 $ \ev k -> guardA (ev `Set.member` ev0) *> x ev k
 
 (<-->) :: (Applicative m, Alternative f) => SignalT s m (f a) -> SignalT s m (f a) -> SignalT s m (f a)
 sign0 <--> sign1 = liftA2 (<|>) sign0 sign1
 
-defaulting :: (Applicative m) => SignalT s m (Maybe a) -> a -> SignalT s m a
-sign0 `defaulting` x = maybe x id <$> sign0
+defaulting :: (Alternative m) => SignalT s m a -> a -> SignalT s m a
+sign0 `defaulting` x = sign0 <|> pure x
 
-(<~~>) :: (Applicative m) => SignalT s m a -> SignalT s m a -> SignalT s m (Maybe a)
-(<~~>) = (<-->) `on` hairpin
+(<~~>) :: (Alternative m) => SignalT s m a -> SignalT s m a -> SignalT s m a
+(<~~>) = (<|>) `on` hairpin
 
 (@>) :: Applicative m => SignalT s m a -> SignalT s m b -> SignalT s m (Maybe b)
 SignalT ev0 _ @> SignalT ev1 y = SignalT (ev0 `Set.union` ev1) $ \ev k -> if ev `Set.member` ev0 then
