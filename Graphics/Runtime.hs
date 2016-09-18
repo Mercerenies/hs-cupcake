@@ -22,6 +22,7 @@ import Foreign.Ptr
 initRuntime :: forall r s. IO (RuntimeSystem r s)
 initRuntime = do
   clicker <- newSignalT Nothing
+  buttoner <- newSignalT Nothing
   let processMsg :: System r (EnvReader r s) -> Handle -> Word32 -> Word64 -> Int64 ->
                     EnvReader r s (Int64, System r (EnvReader r s))
       processMsg sys0 hwnd msg wparam lparam = do
@@ -58,7 +59,7 @@ initRuntime = do
                 liftIO $ freeHaskellFunPtr procPtr
       rs = RuntimeSystem {
                 rsRun = runner,
-                rsEvents = Map.fromList [(TClickEvent, clicker)]
+                rsEvents = Map.fromList [(TClickEvent, clicker), (TButtonEvent, buttoner)]
               }
   return rs
 

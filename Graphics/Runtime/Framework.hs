@@ -7,7 +7,6 @@ import Graphics.Reactive.Signal
 import Graphics.Reactive.System
 import Graphics.Message.Decode
 import Data.Map(Map)
-import Control.Applicative
 import Control.Monad.RWS
 
 data RuntimeSystem r s = RuntimeSystem {

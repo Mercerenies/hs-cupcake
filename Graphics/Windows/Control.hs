@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, DataKinds #-}
+
 module Graphics.Windows.Control(Control, CtrlType(..), getCtrlText, setCtrlText,
                                 ctrlHwnd, makeButton, makeCtrl,
                                 setCtrlPos, showCtrl, hideCtrl, toControl) where
@@ -10,10 +11,9 @@ import Graphics.Windows.Rect
 import Graphics.Types.Tagged
 import Foreign.C.String
 import Foreign.Marshal.Alloc
-import Control.Applicative
 
 data Control = Control CtrlType Handle
-               deriving (Eq, Ord)
+               deriving (Eq, Ord, Show)
 
 data CtrlType = Button
                 deriving (Show, Read, Eq, Ord, Enum)
@@ -59,7 +59,7 @@ ctrlClsName Button = "BUTTON"
 toControl :: CtrlType -> Handle -> Control
 toControl = Control
 
-instance TagType Button CtrlType where
+instance TagType 'Button CtrlType where
     toTEnum _ = Button
 
 instance Taggable CtrlType Control where

@@ -11,11 +11,10 @@ import Graphics.Windows.Window
 import Graphics.Message.Decode
 import qualified Graphics.Message.Mouse as Mouse
 import qualified Data.Map as Map
-import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Reader
 
-makeFrame :: (Functor m, MonadState (RuntimeSetup r s) m) => m Frame
+makeFrame :: (MonadState (RuntimeSetup r s) m) => m Frame
 makeFrame = do
   frame <- newFrame <$> produceId
   rsp <- get
@@ -32,12 +31,12 @@ visibility frame bool = do
   hwnd <- magicCast frame
   liftIO $ if bool then showWindow hwnd else hideWindow hwnd
 
-onClick :: (Functor m, MonadReader (RuntimeSystem r s) m) => Frame -> m (SignalT r (EnvReader r s) Mouse.Click)
+onClick :: (MonadReader (RuntimeSystem r s) m) => Frame -> m (SignalT r (EnvReader r s) Mouse.Click)
 onClick frame = do
   click0 <- asks (Map.lookup TClickEvent . rsEvents)
   return $ case click0 of
              Nothing -> killSignal
-             Just (click, _) -> click ~~> \cev -> do
+             Just (click, _) -> hairpin click ~~> \cev -> do
                                   env <- ask
                                   case cev of
                                     Just (ClickEvent hwnd cev')

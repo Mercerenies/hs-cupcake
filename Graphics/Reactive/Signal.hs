@@ -8,7 +8,6 @@ import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Functor.Identity
 import Data.Foldable as Fold
-import Data.Traversable
 import Data.Function
 import Control.Applicative
 import Graphics.Reactive.Event

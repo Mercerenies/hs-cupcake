@@ -6,9 +6,7 @@ import Graphics.Reactive.Event
 import Graphics.Reactive.Signal
 import Data.Map(Map)
 import qualified Data.Map as Map
-import Data.Monoid
 import Data.IORef
-import Data.Traversable
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
