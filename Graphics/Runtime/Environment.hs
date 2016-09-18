@@ -1,8 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleContexts #-}
 
 module Graphics.Runtime.Environment(RuntimeSetup(..), RuntimeEnv(..), EnvReader, Frame, Widget,
-                                    runEnvReader, runtimeSetup, setupEnv, EnvMagicCast(..), magicCast,
-                                    rspUpdateId) where
+                                    runEnvReader, runtimeSetup, setupEnv, EnvMagicCast(..), magicCast) where
 
 import Graphics.Windows.CoreTypes
 import Graphics.Windows.Control
@@ -24,20 +23,15 @@ data RuntimeEnv r = RuntimeEnv {
       frameToHandle :: Frame -> Handle,
       handleToFrame :: Handle -> Frame,
       widgetToCtrl :: Widget -> Control,
-      ctrlToWidget :: Control -> Widget
+      ctrlToWidget :: Control -> Widget,
+      handleToCtrl :: Handle -> Control
     }
 
 type EnvReader r s = MaybeT (RWST (RuntimeEnv r) () s IO)
 
 instance IdEnv (RuntimeSetup r s) Integer where
     makeId rs = let curr = rspId rs
-                in (curr, rs { rspId = curr })
-
-rspUpdateId :: MonadState (RuntimeSetup r s) m => m Integer
-rspUpdateId = do
-  rsp <- get
-  put $ rsp { rspId = rspId rsp + 1 }
-  return $ rspId rsp
+                in (curr, rs { rspId = curr + 1 })
 
 runEnvReader :: EnvReader r s a -> RuntimeEnv r -> s -> IO (Maybe a, s, ())
 runEnvReader env = runRWST (runMaybeT env)
@@ -58,11 +52,13 @@ setupEnv rsp = do
   mapw0 <- mapM (\wdgt -> makeCtrl "" (getTag wdgt) $ lookupFunc map1 (widgetOwner wdgt)) (rspWidgets rsp)
   let mapw = Map.fromList $ zip (rspWidgets rsp) mapw0
       mapw' = Map.fromList $ zip mapw0 (rspWidgets rsp)
+      mapwc = Map.fromList $ zip (map ctrlHwnd mapw0) mapw0
   return $ RuntimeEnv {
                  frameToHandle = lookupFunc map1,
                  handleToFrame = lookupFunc map1',
                  widgetToCtrl = lookupFunc mapw,
-                 ctrlToWidget = lookupFunc mapw'
+                 ctrlToWidget = lookupFunc mapw',
+                 handleToCtrl = lookupFunc mapwc
                }
 
 class EnvMagicCast a b where
@@ -79,6 +75,12 @@ instance EnvMagicCast Widget Control where
 
 instance EnvMagicCast Control Widget where
     envMagicCast = ctrlToWidget
+
+instance EnvMagicCast Handle Control where
+    envMagicCast = handleToCtrl
+
+instance EnvMagicCast Handle Widget where
+    envMagicCast = liftM2 (.) ctrlToWidget handleToCtrl
 
 magicCast :: EnvMagicCast a b => a -> EnvReader r s b
 magicCast x = asks (\z -> envMagicCast z x)

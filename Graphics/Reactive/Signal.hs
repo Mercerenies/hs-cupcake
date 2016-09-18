@@ -1,6 +1,6 @@
 module Graphics.Reactive.Signal(Event, SignalT, Signal, react, triggerOn, signalT, dependsOn,
                                 runSignalT, runSignal, liftSignal, (~~>), killSignal,
-                                hairpin, (<-->), defaulting, (<~~>), (@>), (@->), stepper, stepperOn) where
+                                hairpin, (<-->), initially, (<~~>), (@>), (@->), stepper, stepperOn) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -10,6 +10,7 @@ import Data.Functor.Identity
 import Data.Foldable as Fold
 import Data.Function
 import Control.Applicative
+import Control.Monad
 import Graphics.Reactive.Event
 import Graphics.Util
 
@@ -68,22 +69,22 @@ hairpin (SignalT ev0 x) = SignalT ev0 $ \ev k -> guardA (ev `Set.member` ev0) *>
 (<-->) :: (Applicative m, Alternative f) => SignalT s m (f a) -> SignalT s m (f a) -> SignalT s m (f a)
 sign0 <--> sign1 = liftA2 (<|>) sign0 sign1
 
-defaulting :: (Alternative m) => SignalT s m a -> a -> SignalT s m a
-sign0 `defaulting` x = sign0 <|> pure x
+initially :: (Alternative m) => SignalT s m a -> a -> SignalT s m a
+sign0 `initially` x = sign0 <|> triggerOn InitEvent @> pure x
 
 (<~~>) :: (Alternative m) => SignalT s m a -> SignalT s m a -> SignalT s m a
 (<~~>) = (<|>) `on` hairpin
 
-(@>) :: Applicative m => SignalT s m a -> SignalT s m b -> SignalT s m (Maybe b)
+(@>) :: Alternative m => SignalT s m a -> SignalT s m b -> SignalT s m b
 SignalT ev0 _ @> SignalT ev1 y = SignalT (ev0 `Set.union` ev1) $ \ev k -> if ev `Set.member` ev0 then
-                                                                              Just <$> y ev k
+                                                                              y ev k
                                                                           else
-                                                                              pure Nothing
+                                                                              empty
 
-(@->) :: (Applicative m, Monad m) => SignalT s m Bool -> SignalT s m b -> SignalT s m (Maybe b)
+(@->) :: (MonadPlus m) => SignalT s m Bool -> SignalT s m b -> SignalT s m b
 SignalT ev0 x @-> SignalT ev1 y = SignalT (ev0 `Set.union` ev1) $ \ev k -> do
                                     x' <- x ev k
-                                    if x' then Just <$> y ev k else pure Nothing
+                                    if x' then y ev k else empty
 
 stepper :: Applicative m => Event s -> SignalT s m Integer
 stepper ev = triggerOn ev *> signalT (\_ k -> pure $ Map.findWithDefault 0 ev k)
@@ -91,5 +92,5 @@ stepper ev = triggerOn ev *> signalT (\_ k -> pure $ Map.findWithDefault 0 ev k)
 stepperSum :: (Traversable f, Applicative m) => f (Event s) -> SignalT s m Integer
 stepperSum evs = Fold.sum <$> traverse (stepper) evs
 
-stepperOn :: Applicative m => SignalT s m a -> SignalT s m Integer
-stepperOn (SignalT ev0 xx) = maybe 0 id <$> SignalT ev0 xx @> stepperSum (Set.toList ev0)
+stepperOn :: Alternative m => SignalT s m a -> SignalT s m Integer
+stepperOn (SignalT ev0 xx) = SignalT ev0 xx @> stepperSum (Set.toList ev0)

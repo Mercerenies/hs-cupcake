@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, DataKinds #-}
 
 module Graphics.Windows.Control(Control, CtrlType(..), getCtrlText, setCtrlText,
-                                ctrlHwnd, makeButton, makeCtrl,
+                                ctrlHwnd, makeButton, makeTextBox, makeCtrl,
                                 setCtrlPos, showCtrl, hideCtrl, toControl) where
 
 import Graphics.Windows.CCall
@@ -15,7 +15,7 @@ import Foreign.Marshal.Alloc
 data Control = Control CtrlType Handle
                deriving (Eq, Ord, Show)
 
-data CtrlType = Button
+data CtrlType = Button | TextBox
                 deriving (Show, Read, Eq, Ord, Enum)
 
 makeCtrl' :: String -> String -> Handle -> IO Handle
@@ -45,22 +45,33 @@ showCtrl (Control _ hwnd) = showWindow hwnd
 hideCtrl :: Control -> IO ()
 hideCtrl (Control _ hwnd) = hideWindow hwnd
 
+-- TODO Should these next two be tagged results?
+
 makeButton :: String -> Handle -> IO Control
 makeButton text par = do
   hwnd <- makeCtrl' "BUTTON" text par
   return $ Control Button hwnd
+
+makeTextBox :: String -> Handle -> IO Control
+makeTextBox text par = do
+  hwnd <- makeCtrl' "EDIT" text par
+  return $ Control TextBox hwnd
 
 makeCtrl :: String -> CtrlType -> Handle -> IO Control
 makeCtrl str ctype hwnd = Control ctype <$> makeCtrl' (ctrlClsName ctype) str hwnd
 
 ctrlClsName :: CtrlType -> String
 ctrlClsName Button = "BUTTON"
+ctrlClsName TextBox = "EDIT"
 
 toControl :: CtrlType -> Handle -> Control
 toControl = Control
 
 instance TagType 'Button CtrlType where
     toTEnum _ = Button
+
+instance TagType 'TextBox CtrlType where
+    toTEnum _ = TextBox
 
 instance Taggable CtrlType Control where
     getTag (Control x _) = x

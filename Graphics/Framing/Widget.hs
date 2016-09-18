@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, MultiParamTypeClasses #-}
 
-module Graphics.Framing.Widget(Widget, newWidget, makeWidget, makeButton, widgetOwner,
+module Graphics.Framing.Widget(Widget, newWidget, makeWidget, makeButton, makeTextBox, widgetOwner,
                                text, position, visibility, onClick) where
 
 import Graphics.Reactive.Signal
 import Graphics.Runtime.Identifier
 import Graphics.Runtime.Environment
 import Graphics.Runtime.Framework
-import Graphics.Windows.Control hiding (makeButton)
+import Graphics.Windows.Control hiding (makeButton, makeTextBox)
 import Graphics.Windows.Rect
 import Graphics.Framing.Core
 import Graphics.Message.Decode
@@ -15,7 +15,6 @@ import Graphics.Types.Tagged
 import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Reader
-import Debug.Trace
 
 makeWidget :: (MonadState (RuntimeSetup r s) m) => CtrlType -> Frame -> m Widget
 makeWidget ctype par = do
@@ -26,6 +25,9 @@ makeWidget ctype par = do
 
 makeButton :: (MonadState (RuntimeSetup r s) m) => Frame -> m (Tagged 'Button Widget)
 makeButton par = tag' <$> makeWidget Button par
+
+makeTextBox :: (MonadState (RuntimeSetup r s) m) => Frame -> m (Tagged 'TextBox Widget)
+makeTextBox par = tag' <$> makeWidget TextBox par
 
 text :: Widget -> String -> EnvReader r s ()
 text wdgt str = do
@@ -50,7 +52,7 @@ onClick wdgt = do
              Just (click, _) -> hairpin click ~~> \cev -> do
                                   env <- ask
                                   case cev of
-                                    Just (ButtonEvent ctrl)
-                                        | untag wdgt == envMagicCast env (untag ctrl) -> pure ()
+                                    Just (ButtonEvent hwnd)
+                                        | untag wdgt == envMagicCast env hwnd -> pure ()
                                         | otherwise -> mzero
                                     _ -> mzero

@@ -3,7 +3,6 @@
 module Graphics.Message.Decode(MsgEvent(..), EventType(..), decodeMsg) where
 
 import Graphics.Windows.CoreTypes
-import Graphics.Windows.Control
 import Graphics.Types.Tagged
 import Graphics.Types.Pointer
 import Graphics.Message.Unpack
@@ -11,7 +10,7 @@ import qualified Graphics.Message.Mouse as Mouse
 import Control.Applicative
 
 data MsgEvent = ClickEvent Handle Mouse.Click |
-                ButtonEvent (Tagged 'Button Control)
+                ButtonEvent Handle
                 deriving (Show, Eq)
 
 data EventType = TClickEvent | TButtonEvent
@@ -42,8 +41,7 @@ decodeCommand (MsgPack _ 0x0111  _  0) = Nothing -- TODO The other uses for deco
 decodeCommand (MsgPack _ 0x0111 wp lp) = case hiWord wp of
                                            0x0000 -> do
                                              ptr <- intToPtr lp
-                                             ptr' <- tag . toControl Button . Handle $ ptr
-                                             return $ ButtonEvent ptr'
+                                             return $ ButtonEvent (Handle ptr)
                                            _ -> Nothing
 decodeCommand _ = Nothing
 

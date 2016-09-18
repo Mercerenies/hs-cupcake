@@ -14,16 +14,20 @@ window :: Windowing r () (System r (EnvReader r ()))
 window = do
   frame0 <- Frame.makeFrame
   button0 <- Widget.makeButton frame0
+  text0 <- Widget.makeTextBox frame0
   clicker <- Frame.onClick frame0
   buttonclick <- Widget.onClick button0
-  let titlebar = (show <$> clicker <|> "Button" <$ buttonclick) `defaulting` "FRP Title :)"
+  let titlebar = (show <$> clicker <|> "Button" <$ buttonclick) `initially` "FRP Title :)"
       buttonpos = pure $ Rect 10 10 80 30
+      textpos = pure $ Rect 10 40 80 60
   return (listSystem [
            pure True ~~> Frame.visibility frame0,
            titlebar ~~> Frame.titlebar frame0,
            pure "Button" ~~> Widget.text (untag button0),
            buttonpos ~~> Widget.position (untag button0),
-           pure True ~~> Widget.visibility (untag button0)
+           pure True ~~> Widget.visibility (untag button0),
+           textpos ~~> Widget.position (untag text0),
+           pure True ~~> Widget.visibility (untag text0)
           ])
 
 main :: IO ()

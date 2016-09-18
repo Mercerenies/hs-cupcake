@@ -54,7 +54,7 @@ HWND makeWindow(char* titlebar) {
     wc.hInstance = GetModuleHandle(NULL);
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = (HBRUSH)(COLOR_APPWORKSPACE + 1);
     wc.lpszMenuName = NULL;
     wc.lpszClassName = className;
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
